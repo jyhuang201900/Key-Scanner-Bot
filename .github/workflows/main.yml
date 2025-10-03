@@ -1,4 +1,4 @@
-name: 自动搜索API密钥
+name: 自动搜索并验证API密钥
 
 on:
   # 允许你从 Actions 页面手动触发此工作流
@@ -30,19 +30,28 @@ jobs:
           python -m pip install --upgrade pip
           if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
 
-      # 第4步：运行搜索脚本
+      # 第4步：运行搜索脚本，生成 api.txt
       - name: 运行密钥搜索脚本
         env:
           # 从仓库的Secrets中读取我们配置的个人访问令牌
           GH_PAT: ${{ secrets.GH_PAT }}
         run: python search_keys.py
 
-      # 第5步：将生成的 api.txt 文件提交回仓库
+      # 第5步：运行验证脚本，读取 api.txt，生成 valid_gemini_keys.txt
+      - name: 验证搜索到的API密钥有效性
+        run: python check_gemini.py
+
+      # 第6步：将验证后的结果文件提交回仓库
       - name: 提交并推送结果
         uses: stefanzweifel/git-auto-commit-action@v5
         with:
-          commit_message: "chore: 自动更新API密钥扫描结果"
-          file_pattern: api.txt # 只提交api.txt文件的变动
+          # 修改了提交信息，使其更准确
+          commit_message: "chore: 自动更新并验证Gemini API密钥"
+          
+          # 关键修改：现在我们只提交验证后的有效和无效密钥文件
+          file_pattern: "valid_gemini_keys.txt invalid_keys.txt"
+          
+          # 以下是自定义提交者信息，保持不变
           commit_user_name: "GitHub Actions Bot"
           commit_user_email: "actions@github.com"
           commit_author: "GitHub Actions Bot <actions@github.com>"
