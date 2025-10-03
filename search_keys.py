@@ -96,7 +96,6 @@ def search_github(query):
         for item in items:
             repo_name = item.get('repository', {}).get('full_name', '未知仓库')
             file_path = item.get('path', '未知路径')
-            file_url = item.get('html_url', '#')
             
             # 从返回的文本匹配中提取含有Key的整行内容
             for match in item.get('text_matches', []):
@@ -109,15 +108,18 @@ def search_github(query):
                     cleaned_word = word.strip('\'",;()[]{}<>') 
                     if cleaned_word.startswith(query) and len(cleaned_word) > len(query): # 确保不是只有前缀
                         print(f"  [+] 发现潜在Key: {cleaned_word} | 来源: {repo_name}/{file_path}")
-                        result_line = f"{cleaned_word} | URL: {file_url}"
-                        found_keys.add(result_line)
+                        
+                        # --- 主要修改点在这里 ---
+                        # 直接将清理后的单词（即API Key）添加到集合中
+                        found_keys.add(cleaned_word)
+                        # -----------------------
 
         # 翻页逻辑：检查响应头中是否有 'next' 链接
         if 'next' in response.links:
             params['page'] += 1
             time.sleep(random.uniform(2, 5)) # 随机暂停2-5秒，避免请求过于频繁
         else:
-            print(f"✅ 查询 '{query}' 结束。本次共发现 {len(found_keys)} 条不重复记录。")
+            print(f"✅ 查询 '{query}' 结束。")
             break
             
     return found_keys
@@ -142,6 +144,7 @@ def main():
 
     # 将所有不重复的Key排序后写入文件
     with open(OUTPUT_FILE, 'w', encoding='utf-8') as f:
+        # 按字母顺序排序后写入文件
         for key in sorted(list(all_found_keys)):
             f.write(f"{key}\n")
     
