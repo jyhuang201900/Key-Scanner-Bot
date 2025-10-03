@@ -1,0 +1,48 @@
+name: 自动搜索API密钥
+
+on:
+  # 允许你从 Actions 页面手动触发此工作流
+  workflow_dispatch:
+  
+  # 设置定时任务（使用CRON表达式）
+  # 以下示例表示在每天的UTC时间3点15分运行一次
+  schedule:
+    - cron: '15 3 * * *'
+
+jobs:
+  search-and-commit:
+    runs-on: ubuntu-latest # 使用最新的Ubuntu虚拟机运行
+
+    steps:
+      # 第1步：检出（下载）你的仓库代码到虚拟机
+      - name: 检出仓库
+        uses: actions/checkout@v4
+
+      # 第2步：设置Python环境
+      - name: 设置 Python 3.10
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+      # 第3步：安装Python依赖库
+      - name: 安装依赖
+        run: |
+          python -m pip install --upgrade pip
+          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+
+      # 第4步：运行搜索脚本
+      - name: 运行密钥搜索脚本
+        env:
+          # 从仓库的Secrets中读取我们配置的个人访问令牌
+          GH_PAT: ${{ secrets.GH_PAT }}
+        run: python search_keys.py
+
+      # 第5步：将生成的 api.txt 文件提交回仓库
+      - name: 提交并推送结果
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: "chore: 自动更新API密钥扫描结果"
+          file_pattern: api.txt # 只提交api.txt文件的变动
+          commit_user_name: "GitHub Actions Bot"
+          commit_user_email: "actions@github.com"
+          commit_author: "GitHub Actions Bot <actions@github.com>"
