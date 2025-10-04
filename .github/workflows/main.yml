@@ -1,21 +1,21 @@
-name: 自动验证API密钥有效性
+name: 自动搜索、验证并提交API密钥
 
 on:
   # 允许你从 Actions 页面手动触发此工作流
   workflow_dispatch:
 
   # 设置定时任务（使用CRON表达式）
-  # 以下示例表示在每天的UTC时间16点30分运行一次
+  # 每天的UTC时间16点30分运行一次
   schedule:
     - cron: '30 16 * * *'
 
 jobs:
-  validate-keys: # 工作名称更改为更具体的 "validate-keys"
+  search-validate-commit: # 任务名修改得更具描述性
     runs-on: ubuntu-latest # 使用最新的Ubuntu虚拟机运行
 
     steps:
-      # 第1步：检出（下载）你的仓库代码到虚拟机
-      # 这一步会自动获取仓库中已有的 api.txt 文件
+      # 第1步：检出仓库代码
+      # 这会获取最新的 api.txt，以便 search_keys.py 能在其基础上追加
       - name: 检出仓库
         uses: actions/checkout@v4
 
@@ -29,29 +29,34 @@ jobs:
       - name: 安装依赖
         run: |
           python -m pip install --upgrade pip
-          # 假设你的依赖项在 requirements.txt 中，例如 requests, tqdm 等
           if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
-          # 如果没有 requirements.txt，你也可以在这里直接安装
-          # pip install requests tqdm
 
-      # 第4步：运行验证脚本
-      # 它会读取仓库中的 api.txt，并生成验证结果文件
+      # 第4步：运行搜索脚本
+      # 此脚本会读取仓库中的 api.txt，并追加新发现的密钥
+      - name: 运行密钥搜索脚本
+        env:
+          # 从仓库的Secrets中读取个人访问令牌
+          GH_PAT: ${{ secrets.GH_PAT }}
+        run: python search_keys.py
+
+      # 第5步：运行验证脚本
+      # 此脚本会读取上一步刚刚更新的 api.txt 文件
       - name: 验证 API 密钥有效性
         run: python check_gemini.py
 
-      # 第5步：将验证后的结果文件提交回仓库
-      - name: 提交验证结果
+      # 第6步：将所有生成的结果文件一次性提交回仓库
+      - name: 提交并推送结果
         uses: stefanzweifel/git-auto-commit-action@v5
         with:
-          # 修改提交信息，清晰地表明这是一个验证更新
-          commit_message: "chore: 自动验证并更新API密钥状态"
-          
-          # 只提交验证脚本产生的结果文件
-          # 假设你的脚本会生成 valid_gemini_keys.txt 和 invalid_keys.txt
-          file_pattern: "valid_gemini_keys.txt invalid_keys.txt"
-          
+          # 修改提交信息，清晰地反映本次操作的全部内容
+          commit_message: "chore: 自动搜索新密钥并更新验证状态"
+
+          # ✨ 核心修改点 ✨
+          # 将 api.txt 也加入到提交的文件列表中
+          # 这会同时提交搜索脚本和验证脚本产生的所有变更
+          file_pattern: "api.txt valid_gemini_keys.txt invalid_keys.txt"
+
           # 自定义提交者信息，保持不变
           commit_user_name: "GitHub Actions Bot"
           commit_user_email: "actions@github.com"
           commit_author: "GitHub Actions Bot <actions@github.com>"
-
