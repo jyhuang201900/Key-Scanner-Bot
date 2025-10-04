@@ -104,7 +104,7 @@ def generate_search_queries():
     """
     queries = []
     current_year = datetime.now().year
-    for year in range(current_year, 2014, -1):
+    for year in range(current_year, 2023, -1):
         for month in range(1, 13):
             start_date = f"{year}-{month:02d}-01"
             end_date_dt = (datetime.strptime(start_date, "%Y-%m-%d") + timedelta(days=32)).replace(day=1) - timedelta(days=1)
