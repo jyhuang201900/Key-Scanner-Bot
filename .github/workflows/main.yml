@@ -1,68 +1,57 @@
-name: 搜索并验证最新 API 密钥
+name: 自动验证API密钥有效性
 
 on:
+  # 允许你从 Actions 页面手动触发此工作流
   workflow_dispatch:
+
+  # 设置定时任务（使用CRON表达式）
+  # 以下示例表示在每天的UTC时间16点30分运行一次
   schedule:
-    - cron: '30 16 * * *' # 每天 北京时间 0:30 (UTC 16:30)
+    - cron: '30 16 * * *'
 
 jobs:
-  # 第一个任务：搜索并提交最新的 api.txt
-  search:
-    runs-on: ubuntu-latest
+  validate-keys: # 工作名称更改为更具体的 "validate-keys"
+    runs-on: ubuntu-latest # 使用最新的Ubuntu虚拟机运行
+
     steps:
+      # 第1步：检出（下载）你的仓库代码到虚拟机
+      # 这一步会自动获取仓库中已有的 api.txt 文件
       - name: 检出仓库
         uses: actions/checkout@v4
 
+      # 第2步：设置Python环境
       - name: 设置 Python 3.10
         uses: actions/setup-python@v5
         with:
           python-version: '3.10'
 
+      # 第3步：安装Python依赖库
       - name: 安装依赖
         run: |
           python -m pip install --upgrade pip
+          # 假设你的依赖项在 requirements.txt 中，例如 requests, tqdm 等
           if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+          # 如果没有 requirements.txt，你也可以在这里直接安装
+          # pip install requests tqdm
 
-      - name: 运行搜索脚本
-        env:
-          GH_PAT: ${{ secrets.GH_PAT }}
-        run: python search_keys.py
-
-      - name: 提交最新 api.txt
-        uses: stefanzweifel/git-auto-commit-action@v5
-        with:
-          commit_message: "chore: 更新最新 API 列表"
-          file_pattern: "api.txt"
-          commit_user_name: "GitHub Actions Bot"
-          commit_user_email: "actions@github.com"
-          commit_author: "GitHub Actions Bot <actions@github.com>"
-
-  # 第二个任务：验证最新的 API 密钥（依赖 search 任务）
-  validate:
-    runs-on: ubuntu-latest
-    needs: search
-    steps:
-      - name: 检出仓库
-        uses: actions/checkout@v4
-
-      - name: 设置 Python 3.10
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.10'
-
-      - name: 安装依赖
-        run: |
-          python -m pip install --upgrade pip
-          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
-
+      # 第4步：运行验证脚本
+      # 它会读取仓库中的 api.txt，并生成验证结果文件
       - name: 验证 API 密钥有效性
         run: python check_gemini.py
 
+      # 第5步：将验证后的结果文件提交回仓库
       - name: 提交验证结果
         uses: stefanzweifel/git-auto-commit-action@v5
         with:
-          commit_message: "chore: 验证最新 API 密钥"
+          # 修改提交信息，清晰地表明这是一个验证更新
+          commit_message: "chore: 自动验证并更新API密钥状态"
+          
+          # 只提交验证脚本产生的结果文件
+          # 假设你的脚本会生成 valid_gemini_keys.txt 和 invalid_keys.txt
           file_pattern: "valid_gemini_keys.txt invalid_keys.txt"
+          
+          # 自定义提交者信息，保持不变
           commit_user_name: "GitHub Actions Bot"
           commit_user_email: "actions@github.com"
           commit_author: "GitHub Actions Bot <actions@github.com>"
+
