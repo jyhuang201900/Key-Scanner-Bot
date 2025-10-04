@@ -7,7 +7,7 @@ on:
   # 设置定时任务（使用CRON表达式）
   # 以下示例表示在每天的UTC时间3点15分运行一次
   schedule:
-    - cron: '15 3 * * *'
+    - cron: '30 16 * * *'
 
 jobs:
   search-and-commit:
