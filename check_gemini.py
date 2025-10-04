@@ -15,7 +15,7 @@ VALID_KEYS_FILE = "valid_gemini_keys.txt"
 INVALID_KEYS_FILE = "invalid_keys.txt"
 
 # 并发检查的线程数（可以根据你的网络情况调整，10-20是个不错的开始）
-MAX_WORKERS = 15
+MAX_WORKERS = 10
 
 # Gemini API的轻量级验证端点 (列出模型)
 VALIDATION_ENDPOINT = "https://generativelanguage.googleapis.com/v1beta/models"
@@ -43,7 +43,15 @@ def check_key(api_key):
             else:
                 print(f"❌ [无效] Key: {api_key[:8]}... (响应异常)")
                 return 'invalid', api_key
-
+        elif response.status_code == 429:
+            # 进一步确认返回的内容是正确的模型列表
+            if 'models' in response.json():
+                print(f"✅ [有效] Key: {api_key[:8]}... ")
+                return 'valid', api_key
+            else:
+                print(f"❌ [无效] Key: {api_key[:8]}... (响应异常)")
+                return 'invalid', api_key
+                
         # 状态码 400 Bad Request，通常是无效Key的标志
         elif response.status_code == 400:
             error_data = response.json()
